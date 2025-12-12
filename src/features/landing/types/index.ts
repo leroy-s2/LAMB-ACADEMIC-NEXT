@@ -1,0 +1,1 @@
+export type { HeroSlide } from './landing.types';
