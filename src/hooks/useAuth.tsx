@@ -14,12 +14,12 @@ export const useAuth = () => {
     
     // Simular tiempo de logout
     setTimeout(() => {
-      // Limpiar estado de Redux (esto también limpiará localStorage)
+      // Limpiar estado de Redux (memoria)
       dispatch(logoutAction());
       dispatch(clearUser());
       
       // Navegar al login
-      router.push('/login');
+      router.push('/log');
       setIsLoggingOut(false);
     }, 1000);
   };

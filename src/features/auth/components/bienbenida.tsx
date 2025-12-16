@@ -53,16 +53,13 @@ export default function WelcomePage() {
     (user ? `${user.firstName ?? ''} ${user.lastName ?? ''}`.trim() : 'Usuario');
 
   const handleLogout = () => {
-    // Limpiar refreshToken de localStorage
-    localStorage.removeItem('_rt');
-
     // Limpiar todo el estado de Redux (memoria)
     dispatch(logoutAuth());
     dispatch(clearUser());
     dispatch(clearPermissions());
 
     // Navegar al login
-    router.push('/login');
+    router.push('/log');
   };
 
   const handleIslaClick = (isla: Isla) => {

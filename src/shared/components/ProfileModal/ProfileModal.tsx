@@ -18,11 +18,9 @@ export function ProfileModal({ isOpen, onClose, profile }: ProfileModalProps) {
   if (!isOpen) return null;
 
   const handleLogout = () => {
-    // Logout logic
-    localStorage.removeItem('accessToken');
-    localStorage.removeItem('refreshToken');
-    localStorage.removeItem('user');
-    window.location.href = '/login';
+    // Logout logic - limpiar solo memoria (Redux)
+    // El middleware de Redux se encarga de la limpieza
+    window.location.href = '/log';
   };
 
   const getRoleColor = (role: string) => {

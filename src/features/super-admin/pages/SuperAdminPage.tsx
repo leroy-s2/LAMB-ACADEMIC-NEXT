@@ -21,7 +21,7 @@ export function SuperAdminPage() {
 
   const handleLogout = () => {
     // Aquí irá la lógica de logout del sistema
-    router.push('/login');
+    router.push('/log');
   };
 
   const renderView = () => {

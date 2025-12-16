@@ -5,6 +5,7 @@ import { useDispatch } from 'react-redux';
 import { logout as logoutAction } from '@/libs/redux/slices/authSlice';
 import { clearUser } from '@/libs/redux/slices/userSlice';
 import { logout as logoutService } from '../services';
+import { store } from '@/libs/redux/store';
 
 export const useLogout = () => {
   const dispatch = useDispatch();
@@ -13,8 +14,9 @@ export const useLogout = () => {
   const logout = useCallback(async () => {
     setLoading(true);
     try {
-      // Obtener el refreshToken del localStorage
-      const refreshToken = localStorage.getItem('refreshToken');
+      // Obtener el refreshToken del Redux store (memoria)
+      const state = store.getState();
+      const refreshToken = state.auth.refreshToken;
 
       // Llamar a la API de logout si hay refreshToken
       if (refreshToken) {
@@ -26,14 +28,14 @@ export const useLogout = () => {
         }
       }
     } finally {
-      // Limpiar estado de Redux (esto también limpia localStorage)
+      // Limpiar estado de Redux (memoria)
       dispatch(logoutAction());
       dispatch(clearUser());
 
       setLoading(false);
 
       // Redirigir al login
-      window.location.href = '/login';
+      window.location.href = '/log';
     }
   }, [dispatch]);
 

@@ -1,31 +1,14 @@
-import axiosLib from 'axios';
+/**
+ * ⚠️ DEPRECATED: Este archivo está obsoleto
+ * Usar `/src/shared/services/http.ts` en su lugar
+ * 
+ * http.ts proporciona:
+ * - Token inyectado desde Redux store (memoria)
+ * - Proxy local en desarrollo
+ * - Manejo centralizado de errores 401
+ * - Logging mejorado
+ */
 
-const axios = axiosLib.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api',
-  timeout: 10000,
-});
+console.warn('⚠️ axios.ts está deprecado. Usa http.ts en su lugar.');
 
-// Interceptor para agregar token a cada request
-axios.interceptors.request.use((config) => {
-  const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
-
-// Interceptor para manejar errores
-axios.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    if (error.response?.status === 401) {
-      // Token expirado, limpiar localStorage
-      if (typeof window !== 'undefined') {
-        localStorage.removeItem('token');
-      }
-    }
-    return Promise.reject(error);
-  }
-);
-
-export default axios;
+export default null;
