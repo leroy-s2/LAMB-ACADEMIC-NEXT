@@ -1,201 +1,314 @@
 'use client';
 
-import React from 'react';
-import Image from 'next/image';
+import { useAppSelector } from '../../../libs/redux/hooks';
+import { useAppDispatch } from '../../../libs/redux/hooks';
+import { setIslaActiva } from '../../../libs/redux/slices/permissionsSlice';
+import { clearUser } from '../../../libs/redux/slices/userSlice';
+import { logout as logoutAuth } from '../../../libs/redux/slices/authSlice';
+import { clearPermissions } from '../../../libs/redux/slices/permissionsSlice';
 import { useRouter } from 'next/navigation';
-import { Search, Menu, ArrowRight, MapPin } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { renderIcon } from '@/shared/utils/iconMapper';
+import type { Isla } from '@/shared/types/permissions.types';
 
-export default function UPeULanding() {
+// Sin fondo por defecto - se carga desde la API
+const DEFAULT_BACKGROUND = '';
+
+export default function WelcomePage() {
+  const user = useAppSelector((state) => state.user.currentUser);
+  const { islas } = useAppSelector((state) => state.permissions);
+  const dispatch = useAppDispatch();
   const router = useRouter();
+  const [hoveredModule, setHoveredModule] = useState<string | null>(null);
+  const [backgroundUrl, setBackgroundUrl] = useState(DEFAULT_BACKGROUND);
+
+  // Estado para evitar mismatch de hidratación
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    const loadBackgroundConfig = async () => {
+      try {
+        const response = await fetch('/api/v1/public/universidad/configuracion/elemento/pantalla_principal');
+        const data = await response.json();
+
+        if (data.success && data.data?.url) {
+          setBackgroundUrl(data.data.url);
+          console.log('✅ Fondo del portal cargado:', data.data.url);
+        }
+      } catch (error) {
+        console.log('ℹ️ Usando fondo por defecto para portal');
+      }
+    };
+
+    loadBackgroundConfig();
+  }, []);
+
+  // Obtener nombre para mostrar
+  const displayName = user?.firstName || user?.nombre || 'Usuario';
+  const fullName = user?.nombreCompleto ||
+    (user ? `${user.firstName ?? ''} ${user.lastName ?? ''}`.trim() : 'Usuario');
+
+  const handleLogout = () => {
+    // Limpiar refreshToken de localStorage
+    localStorage.removeItem('_rt');
+
+    // Limpiar todo el estado de Redux (memoria)
+    dispatch(logoutAuth());
+    dispatch(clearUser());
+    dispatch(clearPermissions());
+
+    // Navegar al login
+    router.push('/login');
+  };
+
+  const handleIslaClick = (isla: Isla) => {
+    // Establecer la isla como activa
+    dispatch(setIslaActiva(isla));
+    // Navegar a la ruta default de la isla
+    router.push(isla.rutaDefault);
+  };
+
+  const avatarUrl = user
+    ? `https://ui-avatars.com/api/?name=${encodeURIComponent(fullName)}&background=1e40af&color=fff&size=200&bold=true`
+    : 'https://ui-avatars.com/api/?name=UPeU&background=1e40af&color=fff&size=200';
+
+  // Obtener roles para mostrar
+  const userRoles = user?.rolesBase || (user?.role ? [user.role] : ['USER']);
+  const roleName = getRoleName(userRoles[0]);
+
+  // Mostrar loading mientras se monta el componente (evita mismatch de hidratación)
+  if (!mounted) {
+    return (
+      <div className="relative w-screen h-screen flex items-center justify-center bg-slate-900">
+        <div className="text-white text-center">
+          <div className="w-12 h-12 border-4 border-white/30 border-t-white rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-white/60">Cargando...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-[#1a3d5c] font-sans text-white overflow-x-hidden">
-      {/* Header */}
-      <header className="fixed top-0 left-0 right-0 z-50 bg-[#2c5270]/95 backdrop-blur-sm border-b border-white/10">
-        <div className="container mx-auto px-6 lg:px-12">
-          <div className="flex items-center justify-between h-20">
-            {/* Logo */}
-            <div className="flex items-center">
-              <div className="bg-white rounded-full px-5 py-2 shadow-lg flex items-center gap-2">
-                <Image
-                  src="https://res.cloudinary.com/df6m46xxz/image/upload/v1759692970/descarga_poy9qy.png"
-                  alt="UPeU Logo"
-                  width={100}
-                  height={35}
-                  className="h-8 w-auto object-contain"
-                  priority
-                />
-              </div>
-            </div>
+    <div className="relative w-screen h-screen flex overflow-hidden">
+      {/* 🎨 Background con overlay gradiente */}
+      <div
+        className="absolute inset-0 z-0"
+        style={{
+          backgroundImage: backgroundUrl ? `url(${backgroundUrl})` : undefined,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundColor: !backgroundUrl ? '#1e3a5f' : undefined,
+        }}
+      />
+      <div className="absolute inset-0 bg-gradient-to-br from-blue-900/40 via-slate-900/50 to-indigo-900/40 z-0" />
 
-            {/* Nav */}
-            <nav className="hidden md:flex items-center gap-10 text-base font-medium text-white">
-              <a href="#" className="hover:text-yellow-300 transition-colors">Admisión</a>
-              <a href="#" className="hover:text-yellow-300 transition-colors">Plan académico</a>
-              <a href="#" className="hover:text-yellow-300 transition-colors">Consultas</a>
-            </nav>
-
-            {/* Actions */}
-            <div className="flex items-center gap-4">
-              <button className="hover:bg-white/10 p-2.5 rounded-full transition-colors">
-                <Search className="w-5 h-5 text-white" />
-              </button>
-              <button className="hover:bg-white/10 p-2.5 rounded-full transition-colors">
-                <Menu className="w-6 h-6 text-white" />
-              </button>
-            </div>
-          </div>
-        </div>
-      </header>
-
-      {/* Hero Section */}
-      <section className="relative min-h-screen flex items-center justify-center pt-20 overflow-hidden">
-        {/* Background Image */}
-        <div className="absolute inset-0 z-0">
-          <Image
-            src="https://img.freepik.com/premium-photo/global-network-connection-world-map-point-line-composition-concept-global-business_11304-1628.jpg"
-            alt="Background"
-            fill
-            className="object-cover opacity-50"
-            priority
-          />
-          <div className="absolute inset-0 bg-gradient-to-r from-[#1a3d5c]/95 via-[#1a3d5c]/80 to-transparent" />
-          <div className="absolute inset-0 bg-gradient-to-b from-[#1a3d5c]/50 via-transparent to-[#1a3d5c]" />
+      {/* 📦 Área de módulos (lado izquierdo) */}
+      <div className="relative flex-1 flex flex-col h-screen z-10 px-4 sm:px-6 lg:px-8 xl:px-12">
+        {/* Header fijo */}
+        <div className="flex-shrink-0 pt-6 pb-4 sm:pt-8 sm:pb-6">
+          <h1 className="text-white text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight mb-1 sm:mb-2">
+            Bienvenido, {displayName}
+          </h1>
+          <p className="text-white/70 text-sm sm:text-base lg:text-lg">
+            Selecciona un módulo para continuar
+          </p>
         </div>
 
-        <div className="relative z-20 container mx-auto px-6 lg:px-12">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-            {/* Left Content */}
-            <div className="relative">
-              {/* Giant Background Text */}
-              <div className="absolute -left-10 top-1/2 -translate-y-1/2 opacity-5 pointer-events-none whitespace-nowrap">
-                <h1 className="text-[clamp(5rem,15vw,12rem)] font-black leading-none tracking-tighter">
-                  DEL MUNDO
-                </h1>
-              </div>
+        {/* 🏝️ Islas de acceso (módulos disponibles) - Área con scroll interno */}
+        <div className="flex-1 overflow-y-auto overflow-x-hidden pb-4 custom-scrollbar">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 lg:gap-5 pr-2">
+            {islas.length > 0 ? (
+              islas
+                .slice()
+                .sort((a, b) => a.orden - b.orden)
+                .map((isla) => (
+                  <div
+                    key={isla.id}
+                    className={`
+                      relative group cursor-pointer
+                      rounded-xl p-5 lg:p-6 shadow-lg
+                      transform transition-all duration-300 ease-out
+                      hover:scale-105 hover:shadow-2xl
+                      border border-white/20 backdrop-blur-sm
+                      h-[160px] sm:h-[180px] lg:h-[200px]
+                      ${hoveredModule === isla.id ? 'ring-2 ring-white/50' : ''}
+                    `}
+                    style={{
+                      background: `linear-gradient(135deg, ${isla.color}cc, ${isla.color}99)`,
+                    }}
+                    onClick={() => handleIslaClick(isla)}
+                    onMouseEnter={() => setHoveredModule(isla.id)}
+                    onMouseLeave={() => setHoveredModule(null)}
+                  >
+                    {/* Efecto de brillo cristalino */}
+                    <div className="absolute inset-0 bg-white/0 group-hover:bg-white/10 rounded-xl transition-all duration-300" />
+                    <div className="absolute top-0 left-1/4 w-1/2 h-1/2 bg-white/5 blur-2xl rounded-full" />
 
-              <div className="relative z-10 space-y-6">
-                <div className="space-y-3">
-                  <h2 className="text-3xl md:text-5xl lg:text-6xl font-bold leading-tight">
-                    Se parte de este cambio
-                  </h2>
-                  <p className="text-2xl md:text-3xl lg:text-4xl font-light text-gray-200">
-                    Lideres con principios
-                  </p>
-                  <p className="text-3xl md:text-4xl lg:text-5xl font-black tracking-wider">
-                    UPEU
-                  </p>
+                    <div className="relative z-10 flex flex-col items-center text-center h-full justify-center">
+                      <div className="text-white mb-2 lg:mb-3 transform group-hover:scale-110 transition-transform duration-300">
+                        {renderIcon(isla.icono, { className: 'w-12 h-12 lg:w-14 lg:h-14' })}
+                      </div>
+                      <h3 className="text-white font-bold text-xs lg:text-sm leading-tight px-2 mb-1">
+                        {isla.nombre}
+                      </h3>
+                      <p className="text-white/70 text-[10px] lg:text-xs line-clamp-2 px-2">
+                        {isla.descripcion}
+                      </p>
+                      {isla.esIslaPrincipal && (
+                        <span className="mt-2 px-2 py-0.5 bg-white/20 rounded-full text-[9px] text-white/80">
+                          Principal
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Indicador de hover */}
+                    <div className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <svg className="w-4 h-4 lg:w-5 lg:h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                      </svg>
+                    </div>
+                  </div>
+                ))
+            ) : (
+              <div className="col-span-full flex items-center justify-center h-full min-h-[300px]">
+                <div className="text-white/60 text-center">
+                  <svg className="w-16 h-16 sm:w-20 sm:h-20 mx-auto mb-4 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                  </svg>
+                  <p className="font-medium text-lg sm:text-xl">No tienes módulos disponibles</p>
+                  <p className="text-sm mt-2">Contacta con el administrador para obtener acceso</p>
                 </div>
-
-                {/* Subtitle with accent bar */}
-                <div className="flex items-start gap-4 mt-8">
-                  <div className="w-1 h-20 bg-yellow-400 rounded-full flex-shrink-0"></div>
-                  <p className="text-gray-300 text-base md:text-lg leading-relaxed max-w-lg">
-                    <span className="font-semibold">SOSTENIBLE</span> - Formando profesionales íntegros y comprometidos
-                  </p>
-                </div>
               </div>
-            </div>
-
-            {/* Right Content - Button */}
-            <div className="flex justify-center lg:justify-end">
-              <button
-                onClick={() => router.push('/log')}
-                className="group relative bg-yellow-400 hover:bg-yellow-300 text-[#1a3d5c] font-bold py-5 px-12 rounded-full text-xl transition-all shadow-xl hover:shadow-2xl transform hover:scale-105 active:scale-95"
-              >
-                <span className="relative z-10">Iniciar sesión</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Explore Section (Floating Card) */}
-      <div className="relative z-30 -mt-20 container mx-auto px-6 lg:px-12 mb-20">
-        <div className="bg-white rounded-3xl shadow-2xl overflow-hidden max-w-6xl mx-auto">
-          <div className="flex flex-col md:flex-row items-stretch">
-            {/* Image Section */}
-            <div className="w-full md:w-2/5 h-64 md:h-auto relative overflow-hidden group">
-              <Image
-                src="https://upeu.edu.pe/wp-content/uploads/2024/03/C-Lima.jpg"
-                alt="Campus"
-                fill
-                className="object-cover transition duration-700 group-hover:scale-110"
-              />
-              <div className="absolute bottom-6 left-6">
-                <span className="bg-yellow-400 text-[#1a3d5c] text-sm font-bold px-4 py-2 rounded-full shadow-lg inline-block">
-                  explore <span className="font-black">UPeU</span>
-                </span>
-              </div>
-            </div>
-
-            {/* Content Section */}
-            <div className="flex-1 p-8 md:p-10 flex flex-col justify-between">
-              <div>
-                <h3 className="text-3xl md:text-4xl font-bold text-[#1a3d5c] mb-3">Explore UPeU</h3>
-                <p className="text-gray-600 text-base md:text-lg leading-relaxed">
-                  Conoce nuestras instalaciones
-                </p>
-              </div>
-
-              <div className="flex items-center justify-between border-t border-gray-200 pt-6 mt-6">
-                <div className="flex flex-col">
-                  <span className="text-gray-500 text-xs uppercase tracking-wide font-semibold mb-1">Nueva fecha</span>
-                  <span className="text-[#1a3d5c] font-bold text-lg">→</span>
-                </div>
-                <button className="bg-[#1a3d5c] hover:bg-[#2c5270] text-white p-3.5 rounded-full transition-all shadow-lg hover:shadow-xl transform hover:scale-110">
-                  <ArrowRight className="w-5 h-5" />
-                </button>
-              </div>
-            </div>
+            )}
           </div>
         </div>
       </div>
 
-      {/* Locations Section */}
-      <section className="relative pb-16 pt-10">
-        <div className="container mx-auto px-6 lg:px-12">
-          <div className="relative rounded-3xl overflow-hidden h-[500px] md:h-[600px] shadow-2xl">
-            <Image
-              src="https://upeu.edu.pe/wp-content/uploads/2022/04/DJI_0196-scaled.jpg"
-              alt="Locations"
-              fill
-              className="object-cover"
-            />
-            
-            {/* Gradient Overlay */}
-            <div className="absolute inset-0 bg-gradient-to-br from-[#1a3d5c]/90 via-[#1a3d5c]/60 to-transparent" />
+      {/* 👤 Panel lateral derecho (Perfil de usuario) */}
+      <div className="relative z-10 w-[80%] sm:w-[75%] lg:w-[360px] h-screen bg-gradient-to-b from-white/10 to-white/5 backdrop-blur-2xl flex flex-col border-l border-white/10 shadow-2xl md:w-[400px]">
+        {/* Logo institucional */}
+        <div className="flex-shrink-0 flex flex-col items-center pt-6 px-4">
+          <img
+            src="https://res.cloudinary.com/df6m46xxz/image/upload/v1759692970/descarga_poy9qy.png"
+            alt="Logo UPeU"
+            className="h-16 sm:h-20 mb-4 drop-shadow-lg"
+          />
+          <div className="w-full h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
+        </div>
 
-            {/* Giant UPeU Text Background */}
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none overflow-hidden">
-              <h2 className="text-[clamp(8rem,25vw,20rem)] font-black text-white/5 -rotate-12 whitespace-nowrap select-none">
-                UPeU
-              </h2>
+        {/* Información del usuario - Área central con scroll */}
+        <div className="flex-1 overflow-y-auto custom-scrollbar flex flex-col items-center justify-start px-4 py-6 space-y-4">
+          {/* Avatar con efecto minimalista */}
+          <div className="flex-shrink-0">
+            <div className="relative w-24 h-24 rounded-2xl ring-1 ring-white/20 overflow-hidden shadow-xl bg-gradient-to-br from-white/20 to-white/5 backdrop-blur-sm">
+              <img
+                src={user?.fotoUrl || avatarUrl}
+                alt="Avatar"
+                className="w-full h-full object-cover"
+              />
             </div>
+          </div>
 
-            {/* Location Labels */}
-            <div className="absolute top-10 left-6 md:left-12 flex items-center gap-4">
-              <div className="bg-white/15 backdrop-blur-md p-3 rounded-full border border-white/30 shadow-lg">
-                <MapPin className="w-7 h-7 text-yellow-400" />
-              </div>
-              <div className="flex flex-col">
-                <span className="text-2xl md:text-4xl font-bold text-white drop-shadow-2xl">Sede LIMA</span>
-                <span className="text-gray-200 text-sm md:text-base">Campus principal</span>
-              </div>
+          {/* Datos del usuario */}
+          <div className="text-center">
+            <h2 className="text-white text-xl font-bold mb-1">
+              {fullName}
+            </h2>
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-white/10 rounded-full mb-2 backdrop-blur-sm border border-white/20">
+              <div className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse" />
+              <span className="text-white/90 text-xs font-medium">{roleName}</span>
             </div>
+            <p className="text-white/60 text-xs px-2">
+              {user?.email || 'usuario@upeu.edu.pe'}
+            </p>
+          </div>
 
-            <div className="absolute bottom-10 right-6 md:right-12 flex items-center gap-4">
-              <div className="flex flex-col text-right">
-                <span className="text-xl md:text-3xl font-bold text-white drop-shadow-2xl">Filial TARAPOTO</span>
-                <span className="text-gray-200 text-sm md:text-base">Región Selva</span>
-              </div>
-              <div className="bg-white/15 backdrop-blur-md p-2.5 rounded-full border border-white/30 shadow-lg">
-                <MapPin className="w-6 h-6 text-yellow-400" />
+          {/* Badges de roles */}
+          <div className="flex flex-wrap gap-2 justify-center">
+            {userRoles.map((role) => (
+              <span
+                key={role}
+                className="px-2.5 py-1 bg-white/10 text-white/80 rounded-lg text-[10px] font-medium border border-white/20 backdrop-blur-sm hover:bg-white/15 transition-colors"
+              >
+                {getRoleName(role)}
+              </span>
+            ))}
+          </div>
+
+          {/* Tarjeta de información compacta */}
+          <div className="w-full bg-white/10 backdrop-blur-md rounded-xl p-4 border border-white/20">
+            <div className="text-center">
+              <div className="text-3xl font-bold text-white mb-1">{islas.length}</div>
+              <div className="text-white/60 text-xs">Módulos accesibles</div>
+              <div className="mt-3 pt-3 border-t border-white/10">
+                <div className="text-[10px] text-white/50 space-y-0.5">
+                  <p>✓ Conectado</p>
+                  <p>✓ Sesión activa</p>
+                </div>
               </div>
             </div>
           </div>
         </div>
-      </section>
+
+        {/* Botones de acción */}
+        <div className="flex-shrink-0 px-4 py-4 space-y-2 border-t border-white/10">
+          <button
+            className="w-full bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-semibold py-2.5 rounded-lg transition-all duration-300 shadow-lg hover:shadow-emerald-500/30 transform hover:scale-[1.02] text-xs"
+            onClick={handleLogout}
+          >
+            Cerrar Sesión
+          </button>
+          <button
+            className="w-full bg-white/10 hover:bg-white/20 text-white/90 font-medium py-2 rounded-lg transition-all duration-300 backdrop-blur-sm border border-white/20 hover:border-white/40 text-xs"
+            onClick={() => router.push('/forgot-password')}
+          >
+            Cambiar Contraseña
+          </button>
+        </div>
+
+        {/* Footer decorativo */}
+        <div className="flex-shrink-0 px-4 py-2 text-center border-t border-white/10">
+          <p className="text-white/30 text-[10px]">UPeU - Sistema de Administración</p>
+        </div>
+      </div>
+
+      <style jsx global>{`
+        .custom-scrollbar::-webkit-scrollbar {
+          width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+          background: rgba(255, 255, 255, 0.05);
+          border-radius: 10px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+          background: rgba(255, 255, 255, 0.2);
+          border-radius: 10px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+          background: rgba(255, 255, 255, 0.3);
+        }
+      `}</style>
     </div>
   );
+}
+
+// 🎭 Helper para obtener nombres de roles legibles
+function getRoleName(role: string): string {
+  const roleNames: Record<string, string> = {
+    ADMIN: 'Administrador',
+    SUPER_ADMIN: 'Super Administrador',
+    TEACHER: 'Docente',
+    STUDENT: 'Estudiante',
+    STAFF: 'Personal',
+    RECTOR: 'Rector',
+    DECANO: 'Decano',
+    DIRECTOR: 'Director',
+    SECRETARIO: 'Secretario',
+    USER: 'Usuario',
+  };
+  return roleNames[role] || role;
 }

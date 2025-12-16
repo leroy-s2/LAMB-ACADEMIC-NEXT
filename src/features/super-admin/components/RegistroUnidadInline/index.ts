@@ -1,0 +1,1 @@
+export { RegistroUnidadInline } from './RegistroUnidadInline';

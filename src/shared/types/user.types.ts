@@ -13,13 +13,3 @@ export interface User extends BaseEntity {
 
 export type UserRole = 'ADMIN' | 'TEACHER' | 'STUDENT' | 'STAFF';
 export type UserStatus = 'ACTIVE' | 'INACTIVE' | 'PENDING' | 'SUSPENDED';
-
-export interface UserRegistrationData {
-  username: string;
-  email: string;
-  password: string;
-  firstName: string;
-  lastName: string;
-  phone: string;
-  role?: UserRole;
-}

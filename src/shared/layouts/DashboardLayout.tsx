@@ -1,10 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAppSelector, useAppDispatch } from '@/libs/redux/hooks';
 import { useLogout } from '@/features/auth/hooks';
 import { toggleTheme } from '@/libs/redux/themes/themeSlice';
+import { getIconComponent } from '@/shared/utils/iconMapper';
+import type { SidebarTarget } from '@/shared/types/permissions.types';
 import {
   Moon,
   Sun,
@@ -15,7 +17,9 @@ import {
   User,
   LayoutDashboard,
   ChevronLeft,
-  ChevronDown
+  ChevronDown,
+  Home,
+  Folder
 } from 'lucide-react';
 
 interface DashboardLayoutProps {
@@ -39,43 +43,6 @@ interface MenuSection {
   items: MenuItem[];
 }
 
-const menuSections: MenuSection[] = [
-  {
-    items: [
-      {
-        id: 'Imagen',
-        label: 'Imagen Institucional',
-        route: '/portal/InstitutionalImage',
-        icon: (
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-6">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 21h19.5m-18-18v18m10.5-18v18m6-13.5V21M6.75 6.75h.75m-.75 3h.75m-.75 3h.75m3-6h.75m-.75 3h.75m-.75 3h.75M6.75 21v-3.375c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21M3 3h12m-.75 4.5H21m-3.75 3.75h.008v.008h-.008v-.008Zm0 3h.008v.008h-.008v-.008Zm0 3h.008v.008h-.008v-.008Z" />
-          </svg>
-        ),
-      },
-      {
-        id: 'categories',
-        label: 'Categorías',
-        route: '/portal/categories',
-        icon: (
-          <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-            <path d="M7 3a1 1 0 000 2h6a1 1 0 100-2H7zM4 7a1 1 0 011-1h10a1 1 0 110 2H5a1 1 0 01-1-1zM2 11a2 2 0 012-2h12a2 2 0 012 2v4a2 2 0 01-2 2H4a2 2 0 01-2-2v-4z" />
-          </svg>
-        ),
-      },
-      {
-        id: 'users',
-        label: 'Usuarios',
-        route: '/portal/users',
-        icon: (
-          <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-            <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z" />
-          </svg>
-        ),
-      },
-    ]
-  }
-];
-
 export default function DashboardLayout({
   children,
   title,
@@ -88,12 +55,51 @@ export default function DashboardLayout({
   const [expandedMenus, setExpandedMenus] = useState<string[]>([]);
 
   const user = useAppSelector((state) => state.user.currentUser);
+  const { islaActiva } = useAppSelector((state) => state.permissions);
   const theme = useAppSelector((state) => state.theme.current);
   const dispatch = useAppDispatch();
 
   const router = useRouter();
   const pathname = usePathname();
-  const { handleLogout: logout, loading: logoutLoading } = useLogout();
+  const { logout } = useLogout();
+
+  // Generar menú dinámicamente desde sidebarTargets
+  const dynamicMenuSections = useMemo((): MenuSection[] => {
+    if (!islaActiva?.sidebarTargets?.length) {
+      // Menú fallback si no hay isla activa
+      return [{
+        items: [{
+          id: 'home',
+          label: 'Inicio',
+          route: '/portal',
+          icon: <Home className="w-5 h-5" />,
+        }]
+      }];
+    }
+
+    // Ordenar por orden y mapear a MenuItem
+    const sortedTargets = [...islaActiva.sidebarTargets].sort(
+      (a: SidebarTarget, b: SidebarTarget) => a.orden - b.orden
+    );
+
+    const menuItems: MenuItem[] = sortedTargets.map((target: SidebarTarget) => {
+      const IconComponent = getIconComponent(target.icono, Folder);
+      return {
+        id: target.id,
+        label: target.nombre,
+        route: target.rutaFrontend,
+        icon: <IconComponent className="w-5 h-5" />,
+      };
+    });
+
+    return [{
+      title: islaActiva.nombre,
+      items: menuItems,
+    }];
+  }, [islaActiva]);
+
+  // Usar customMenuItems si se proporcionan, sino usar dinámicos
+  const menuSections = customMenuItems || dynamicMenuSections;
 
   const onLogout = () => {
     logout();
@@ -101,7 +107,7 @@ export default function DashboardLayout({
 
   const avatarUrl = user
     ? `https://ui-avatars.com/api/?name=${encodeURIComponent(
-      `${user.firstName ?? ''} ${user.lastName ?? ''}`
+      user.nombreCompleto || `${user.firstName ?? ''} ${user.lastName ?? ''}`
     )}&background=173a6b&color=fff&size=128`
     : 'https://ui-avatars.com/api/?name=UPeU&background=173a6b&color=fff&size=128';
 
@@ -128,14 +134,23 @@ export default function DashboardLayout({
 
   const getBreadcrumbs = () => {
     const pathSegments = pathname.split('/').filter(Boolean);
+
+    // Mapeo dinámico de rutas basado en sidebarTargets
     const routeNames: Record<string, string> = {
       portal: 'Portal',
-      'institutional-management': 'Gestión Institucional',
-      categories: 'Categorías',
-      users: 'Usuarios',
-      InstitutionalImage: 'Imagen Institucional',
-      dashboard: 'Dashboard'
+      admin: 'Administración',
+      dashboard: 'Dashboard',
     };
+
+    // Agregar rutas dinámicas desde la isla activa
+    if (islaActiva?.sidebarTargets) {
+      for (const target of islaActiva.sidebarTargets) {
+        const lastSegment = target.rutaFrontend.split('/').pop();
+        if (lastSegment) {
+          routeNames[lastSegment] = target.nombre;
+        }
+      }
+    }
 
     return (
       <div className="flex items-center text-sm text-gray-500 dark:text-gray-400">
@@ -232,9 +247,27 @@ export default function DashboardLayout({
           </div>
         </div>
 
+        {/* Isla activa indicator */}
+        {islaActiva && isSidebarOpen && (
+          <div className="px-4 py-2 border-b border-gray-100 dark:border-slate-800">
+            <div
+              className="flex items-center gap-2 px-2 py-1 rounded-lg"
+              style={{ backgroundColor: `${islaActiva.color}15` }}
+            >
+              <div
+                className="w-2 h-2 rounded-full"
+                style={{ backgroundColor: islaActiva.color }}
+              />
+              <span className="text-xs font-medium text-gray-700 dark:text-gray-300 truncate">
+                {islaActiva.nombre}
+              </span>
+            </div>
+          </div>
+        )}
+
         {/* Navigation Items */}
         <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-1 custom-scrollbar">
-          {(customMenuItems || menuSections).map((section, index) => (
+          {menuSections.map((section, index) => (
             <div key={index} className="mb-4">
               {section.title && isSidebarOpen && (
                 <h3 className="px-4 mb-2 text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
@@ -309,12 +342,12 @@ export default function DashboardLayout({
                 className="flex items-center gap-2 p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors border border-transparent hover:border-gray-200 dark:hover:border-slate-700"
               >
                 <img
-                  src={avatarUrl}
+                  src={user?.fotoUrl || avatarUrl}
                   alt="Avatar"
                   className="h-8 w-8 rounded-full object-cover border border-gray-200 dark:border-slate-700"
                 />
                 <span className="hidden sm:block text-sm font-medium text-gray-700 dark:text-gray-200 max-w-[100px] truncate">
-                  {user ? user.firstName : 'Usuario'}
+                  {user?.firstName || user?.nombre || 'Usuario'}
                 </span>
               </button>
 
@@ -328,7 +361,7 @@ export default function DashboardLayout({
                   <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-slate-900 rounded-xl shadow-lg border border-gray-200 dark:border-slate-800 py-2 z-40 animate-in fade-in zoom-in-95 duration-200">
                     <div className="px-4 py-2 border-b border-gray-100 dark:border-slate-800">
                       <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
-                        {user ? `${user.firstName} ${user.lastName}` : 'Usuario Sistema'}
+                        {user?.nombreCompleto || (user ? `${user.firstName} ${user.lastName}` : 'Usuario Sistema')}
                       </p>
                       <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
                         {user?.email || 'usuario@upeu.edu.pe'}
@@ -355,10 +388,9 @@ export default function DashboardLayout({
                       <button
                         onClick={onLogout}
                         className="w-full flex items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-                        disabled={logoutLoading}
                       >
                         <LogOut className="w-4 h-4 mr-2" />
-                        {logoutLoading ? 'Cerrando...' : 'Cerrar Sesión'}
+                        Cerrar Sesión
                       </button>
                     </div>
                   </div>
@@ -394,3 +426,4 @@ export default function DashboardLayout({
     </div>
   );
 }
+

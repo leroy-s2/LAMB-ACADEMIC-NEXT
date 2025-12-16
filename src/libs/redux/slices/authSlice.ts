@@ -2,13 +2,18 @@ import { createSlice } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';
 import { loginAsync, refreshTokenAsync } from '../thunks/authThunks';
 
+/**
+ * Estado de autenticación
+ * TODO: Los tokens se mantienen SOLO en memoria (Redux state)
+ * En producción, el refreshToken debería venir como HttpOnly cookie
+ */
 export interface AuthState {
   accessToken: string | null;
   refreshToken: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  isRefreshing: boolean; // Flag para evitar múltiples refresh simultáneos
-  lastRefreshAttempt: number | null; // Timestamp del último intento
+  isRefreshing: boolean;
+  lastRefreshAttempt: number | null;
 }
 
 const initialState: AuthState = {
@@ -28,39 +33,25 @@ export const authSlice = createSlice({
       state.accessToken = action.payload.accessToken;
       state.refreshToken = action.payload.refreshToken;
       state.isAuthenticated = true;
-      
-      // Guardar en localStorage
-      localStorage.setItem('accessToken', action.payload.accessToken);
-      localStorage.setItem('refreshToken', action.payload.refreshToken);
+      // ✅ NO localStorage - solo memoria
     },
     setAccessToken: (state, action: PayloadAction<string | null>) => {
       state.accessToken = action.payload;
-      if (action.payload) {
-        localStorage.setItem('accessToken', action.payload);
-      } else {
-        localStorage.removeItem('accessToken');
-      }
+      // ✅ NO localStorage - solo memoria
     },
     setRefreshToken: (state, action: PayloadAction<string | null>) => {
       state.refreshToken = action.payload;
-      if (action.payload) {
-        localStorage.setItem('refreshToken', action.payload);
-      } else {
-        localStorage.removeItem('refreshToken');
-      }
+      // ✅ NO localStorage - solo memoria
     },
     setLoading: (state, action: PayloadAction<boolean>) => {
       state.isLoading = action.payload;
     },
-    initializeAuth: (state) => {
-      const accessToken = localStorage.getItem('accessToken');
-      const refreshToken = localStorage.getItem('refreshToken');
-      
-      if (accessToken && refreshToken) {
-        state.accessToken = accessToken;
-        state.refreshToken = refreshToken;
-        state.isAuthenticated = true;
-      }
+    /**
+     * @deprecated No se usa localStorage, esta función ya no tiene efecto
+     */
+    initializeAuth: (_state) => {
+      // ✅ NO localStorage - la sesión no persiste al refrescar página
+      // En producción, usar HttpOnly cookie + refresh endpoint
     },
     logout: (state) => {
       state.accessToken = null;
@@ -69,11 +60,7 @@ export const authSlice = createSlice({
       state.isLoading = false;
       state.isRefreshing = false;
       state.lastRefreshAttempt = null;
-      
-      // Limpiar localStorage
-      localStorage.removeItem('accessToken');
-      localStorage.removeItem('refreshToken');
-      localStorage.removeItem('user');
+      // ✅ NO localStorage - solo limpiar memoria
     },
   },
   extraReducers: (builder) => {
@@ -87,11 +74,7 @@ export const authSlice = createSlice({
         state.accessToken = action.payload.accessToken;
         state.refreshToken = action.payload.refreshToken;
         state.isAuthenticated = true;
-        
-        // Guardar en localStorage
-        localStorage.setItem('accessToken', action.payload.accessToken);
-        localStorage.setItem('refreshToken', action.payload.refreshToken);
-        localStorage.setItem('user', JSON.stringify(action.payload.user));
+        // ✅ NO localStorage - user y permissions se manejan en sus propios slices
       })
       .addCase(loginAsync.rejected, (state) => {
         state.isLoading = false;
@@ -107,32 +90,29 @@ export const authSlice = createSlice({
         state.accessToken = action.payload.accessToken;
         state.refreshToken = action.payload.refreshToken;
         state.isAuthenticated = true;
-        
-        // Guardar en localStorage
-        localStorage.setItem('accessToken', action.payload.accessToken);
-        localStorage.setItem('refreshToken', action.payload.refreshToken);
+        // ✅ NO localStorage - solo memoria
       })
       .addCase(refreshTokenAsync.rejected, (state) => {
         state.isRefreshing = false;
         state.accessToken = null;
         state.refreshToken = null;
         state.isAuthenticated = false;
-        
-        // Limpiar localStorage
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('refreshToken');
-        localStorage.removeItem('user');
+        // ✅ NO localStorage - solo limpiar memoria
       });
   },
 });
 
-export const { 
-  setTokens, 
-  setAccessToken, 
-  setRefreshToken, 
-  setLoading, 
-  initializeAuth, 
-  logout 
+export const {
+  setTokens,
+  setAccessToken,
+  setRefreshToken,
+  setLoading,
+  initializeAuth,
+  logout
 } = authSlice.actions;
+
+// Aliases para compatibilidad
+export const setAuthTokens = setTokens;
+export const setLoginLoading = setLoading;
 
 export default authSlice.reducer;
