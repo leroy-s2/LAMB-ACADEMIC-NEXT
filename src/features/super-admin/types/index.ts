@@ -27,6 +27,8 @@ export interface RolPermisos {
   descripcion: string;
   color: string;
   permisos: Set<string>;
+  totalPermisos?: number;
+  modulosActivos?: number;
 }
 
 export interface Licencia {
