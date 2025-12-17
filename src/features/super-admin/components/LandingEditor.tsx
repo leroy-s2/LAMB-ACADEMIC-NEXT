@@ -70,7 +70,11 @@ function AddButton({ label, onClick }: { label: string; onClick: () => void }) {
     );
 }
 
-export default function LandingEditor() {
+interface LandingEditorProps {
+    onClose?: () => void;
+}
+
+export default function LandingEditor({ onClose }: LandingEditorProps) {
     const router = useRouter();
     const [config, setConfig] = useState<LandingConfig>(fallbackConfig);
     const [originalConfig, setOriginalConfig] = useState<LandingConfig>(fallbackConfig);
@@ -145,7 +149,7 @@ export default function LandingEditor() {
                 <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
                     <div className="flex items-center gap-4">
                         <button
-                            onClick={() => router.push('/super-admin')}
+                            onClick={() => onClose ? onClose() : router.push('/super-admin/institucion')}
                             className="flex items-center gap-2 text-gray-300 hover:text-white transition-colors"
                         >
                             <ArrowLeft className="w-5 h-5" />

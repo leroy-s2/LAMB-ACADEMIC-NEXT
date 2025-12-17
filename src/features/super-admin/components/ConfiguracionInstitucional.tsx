@@ -1,8 +1,11 @@
 'use client';
 
+import { useState } from 'react';
 import { Loader } from 'lucide-react';
 import { useUniversidadConfig } from '../hooks/useUniversidadConfig';
 import { DatosIdentidad, InformacionAuditoria, ParametrosAvanzados } from './institucional';
+import { useLayout } from '../context/LayoutContext';
+import LandingEditor from './LandingEditor';
 
 /**
  * ConfiguracionInstitucional - Componente Orquestador
@@ -13,6 +16,8 @@ import { DatosIdentidad, InformacionAuditoria, ParametrosAvanzados } from './ins
  * 3. ParametrosAvanzados - Fondos del sistema (portal/login)
  */
 export function ConfiguracionInstitucional() {
+  const [showLandingEditor, setShowLandingEditor] = useState(false);
+  const { setFullscreen } = useLayout();
   const {
     config,
     loading,
@@ -29,6 +34,21 @@ export function ConfiguracionInstitucional() {
     setError,
     setSuccessMessage,
   } = useUniversidadConfig();
+
+  const handleOpenEditor = () => {
+    setFullscreen(true);
+    setShowLandingEditor(true);
+  };
+
+  const handleCloseEditor = () => {
+    setFullscreen(false);
+    setShowLandingEditor(false);
+  };
+
+  // Si está mostrando el editor, renderizarlo ocupando todo el espacio
+  if (showLandingEditor) {
+    return <LandingEditor onClose={handleCloseEditor} />;
+  }
 
   return (
     <div className="p-8 bg-gray-50 min-h-screen">
@@ -82,6 +102,7 @@ export function ConfiguracionInstitucional() {
           <ParametrosAvanzados
             onError={setError}
             onSuccess={setSuccessMessage}
+            onOpenLandingEditor={handleOpenEditor}
           />
         </>
       ) : null}

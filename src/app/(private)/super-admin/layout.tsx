@@ -12,19 +12,20 @@ import {
     Folder,
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
+import { LayoutProvider, useLayout } from '@/features/super-admin/context/LayoutContext';
 
 interface SuperAdminLayoutProps {
     children: ReactNode;
 }
 
 /**
- * Layout para las páginas de super-admin que mantiene el diseño original
- * pero usa navegación por rutas en lugar de switch de views
+ * Contenido interno del layout que usa el contexto
  */
-export default function SuperAdminLayout({ children }: SuperAdminLayoutProps) {
+function LayoutContent({ children }: SuperAdminLayoutProps) {
     const [isCollapsed, setIsCollapsed] = useState(false);
     const router = useRouter();
     const pathname = usePathname();
+    const { isFullscreen } = useLayout();
 
     const user = useAppSelector((state) => state.user.currentUser);
     const { islaActiva } = useAppSelector((state) => state.permissions);
@@ -54,9 +55,14 @@ export default function SuperAdminLayout({ children }: SuperAdminLayoutProps) {
 
     return (
         <div className="flex h-screen bg-gray-50 overflow-hidden">
-            {/* Sidebar con diseño original */}
+            {/* Sidebar con diseño original - animación de ocultado */}
+            {!isFullscreen && (
             <aside
-                className={`${isCollapsed ? 'w-20' : 'w-64'} bg-gradient-to-b from-slate-950 to-blue-950 text-white flex flex-col h-screen transition-all duration-300`}
+                className={`
+                    ${isCollapsed ? 'w-20' : 'w-64'} 
+                    bg-gradient-to-b from-slate-950 to-blue-950 text-white flex flex-col h-screen 
+                    transition-all duration-300 ease-in-out overflow-hidden flex-shrink-0
+                `}
             >
                 {/* Header */}
                 <div className="p-6 border-b border-white/10">
@@ -119,12 +125,28 @@ export default function SuperAdminLayout({ children }: SuperAdminLayoutProps) {
                     </button>
                 </div>
             </aside>
+            )}
 
             {/* Main content */}
             <div className="flex-1 flex flex-col overflow-hidden">
-                <Topbar userName={userName} userInitials={userInitials} />
+                {/* Topbar - oculto en fullscreen */}
+                {!isFullscreen && (
+                    <Topbar userName={userName} userInitials={userInitials} />
+                )}
                 <main className="flex-1 overflow-y-auto">{children}</main>
             </div>
         </div>
+    );
+}
+
+/**
+ * Layout para las páginas de super-admin que mantiene el diseño original
+ * pero usa navegación por rutas en lugar de switch de views
+ */
+export default function SuperAdminLayout({ children }: SuperAdminLayoutProps) {
+    return (
+        <LayoutProvider>
+            <LayoutContent>{children}</LayoutContent>
+        </LayoutProvider>
     );
 }

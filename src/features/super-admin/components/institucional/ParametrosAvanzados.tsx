@@ -1,16 +1,15 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
 import { useFondosSistema } from '../../hooks/useFondosSistema';
 import { FondoPreview } from './FondoPreview';
 
 interface ParametrosAvanzadosProps {
     onError?: (error: string | null) => void;
     onSuccess?: (message: string | null) => void;
+    onOpenLandingEditor?: () => void;
 }
 
-export function ParametrosAvanzados({ onError, onSuccess }: ParametrosAvanzadosProps) {
-    const router = useRouter();
+export function ParametrosAvanzados({ onError, onSuccess, onOpenLandingEditor }: ParametrosAvanzadosProps) {
     const {
         fondoPortal,
         fondoLogin,
@@ -72,10 +71,10 @@ export function ParametrosAvanzados({ onError, onSuccess }: ParametrosAvanzadosP
                 <p className="text-sm text-yellow-700">Al modificar estos parámetros serán visibles por cualquier persona</p>
             </div>
 
-            {/* Botón principal - navega al editor */}
+            {/* Botón principal - abre el editor en modo fullscreen */}
             <div className="px-6 pb-6 text-center">
                 <button
-                    onClick={() => router.push('/super-admin/landing-editor')}
+                    onClick={onOpenLandingEditor}
                     className="px-8 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white font-semibold rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all shadow-lg hover:shadow-xl transform hover:scale-[1.02]"
                 >
                     Configurar cara del sistema
